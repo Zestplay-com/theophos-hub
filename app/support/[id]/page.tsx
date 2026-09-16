@@ -1,0 +1,18 @@
+'use client'
+
+import Link from 'next/link'
+import { ArrowLeft, CheckCircle2, ExternalLink, Loader2, Send } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { addDoc, collection, doc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { auth, db, onAuthStateChanged, getCurrentCreator } from '../../../lib/auth'
+
+const fields=[['hook','Hook'],['title','Title'],['thumbnail','Thumbnail'],['value','Value'],['presentation','Presentation'],['cta','Call to action'],['overall','Overall']]
+export default function Support(){
+ const {id}=useParams<{id:string}>();const router=useRouter();const [video,setVideo]=useState<any>(null);const [uid,setUid]=useState('');const [ratings,setRatings]=useState<Record<string,number>>({});const [note,setNote]=useState('');const [loading,setLoading]=useState(true);const [saving,setSaving]=useState(false);const [done,setDone]=useState(false);const [error,setError]=useState('')
+ useEffect(()=>{const unsub=onAuthStateChanged(auth,async u=>{if(!u){router.replace('/login');return}setUid(u.uid);try{const snap=await getDoc(doc(db,'videos',id));if(!snap.exists())setError('This video could not be found.');else setVideo({id:snap.id,...snap.data()})}catch{setError('Could not load this video.')}finally{setLoading(false)}});return()=>unsub()},[id,router])
+ async function submit(){setError('');if(Object.keys(ratings).length<7){setError('Please rate each area so your feedback is useful.');return}setSaving(true);try{await addDoc(collection(db,'feedback'),{videoId:id,fromCreatorId:uid,...ratings,note:note.trim(),createdAt:serverTimestamp()});setDone(true)}catch{setError('Feedback could not be saved. Please try again.')}finally{setSaving(false)}}
+ if(loading)return <main className="authPage"><div className="authCard"><p>Loading video...</p></div></main>
+ if(error&&!video)return <main className="authPage"><div className="authCard"><p>{error}</p><Link href="/discover" className="btn primary">Back to discover</Link></div></main>
+ return <main className="onboard"><header className="onboardNav container"><Link className="brand" href="/">theophos<span>hub</span></Link><Link href="/discover" className="back"><ArrowLeft size={16}/> Discover</Link></header><div className="onboardWrap"><section className="onboardCard"><div className="eyebrow">CREATOR SUPPORT MISSION</div><h1>{video.title}</h1><p>By {video.creatorName||'Creator'} · {video.niche}</p><a className="btn soft" href={video.youtubeUrl} target="_blank" rel="noreferrer">Open video on YouTube <ExternalLink size={15}/></a>{done?<div className="emptyState"><CheckCircle2 size={34}/><h3>Feedback sent.</h3><p>Thanks for helping another creator improve. Your feedback is recorded as genuine community participation.</p><Link href="/discover" className="btn primary">Continue discovering</Link></div>:<><div className="feedbackList">{fields.map(([key,label])=><label key={key}>{label}<select value={ratings[key]||''} onChange={e=>setRatings(r=>({...r,[key]:Number(e.target.value)}))}><option value="">Rate 1–5</option>{[1,2,3,4,5].map(n=><option value={n} key={n}>{n} / 5</option>)}</select></label>)}</div><label>Useful feedback note<textarea value={note} onChange={e=>setNote(e.target.value)} rows={5} placeholder="What specifically could make this video clearer, stronger or more useful?"/></label>{error&&<div className="formError">{error}</div>}<button className="btn primary large" onClick={submit} disabled={saving}>{saving?<><Loader2 size={17} className="spin"/> Sending...</>:<><Send size={17}/> Send meaningful feedback</>}</button></>}</section></div></main>
+}
