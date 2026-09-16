@@ -33,6 +33,7 @@ service cloud.firestore {
       allow read: if signedIn();
       allow create: if signedIn()
         && request.resource.data.fromCreatorId == request.auth.uid
+        && get(/databases/$(database)/documents/videos/$(request.resource.data.videoId)).data.creatorId != request.auth.uid
         && validRating(request.resource.data.hook)
         && validRating(request.resource.data.title)
         && validRating(request.resource.data.thumbnail)
@@ -50,6 +51,21 @@ service cloud.firestore {
         && resource.data.assigneeId == request.auth.uid
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']);
       allow delete: if false;
+    }
+
+    match /follows/{followId} {
+      allow read: if signedIn() && (resource.data.followerId == request.auth.uid || resource.data.followingId == request.auth.uid);
+      allow create: if signedIn()
+        && request.resource.data.followerId == request.auth.uid
+        && request.resource.data.followingId is string
+        && request.resource.data.followingId != request.auth.uid;
+      allow delete: if signedIn() && resource.data.followerId == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow write: if false;
     }
 
     match /{document=**} { allow read, write: if false; }
