@@ -10,7 +10,9 @@ export async function GET(request: Request) {
     const followSnap = await db.collection('follows').where('followerId', '==', decoded.uid).limit(100).get()
     const ids = new Set([decoded.uid, ...followSnap.docs.map(d => String(d.data().followingId)).filter(Boolean)])
     const videosSnap = await db.collection('videos').orderBy('createdAt', 'desc').limit(50).get()
-    const videos = videosSnap.docs.filter(d => ids.has(String(d.data().creatorId))).map(d => ({ id: d.id, kind: 'video', createdAt: d.data().createdAt?.toDate?.()?.toISOString() || null, ...d.data() }))
+    const videos: any[] = videosSnap.docs
+      .filter(d => ids.has(String(d.data().creatorId)))
+      .map(d => ({ id: d.id, kind: 'video', createdAt: d.data().createdAt?.toDate?.()?.toISOString() || null, ...d.data() }))
     const profiles = new Map<string, any>()
     await Promise.all([...ids].map(async id => { const s = await db.collection('users').doc(id).get(); if (s.exists) profiles.set(id, s.data()) }))
     return NextResponse.json({ activities: videos.map(v => ({ ...v, creator: profiles.get(v.creatorId) || null })) })
