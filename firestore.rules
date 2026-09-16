@@ -46,11 +46,7 @@ service cloud.firestore {
 
     match /missions/{missionId} {
       allow read: if signedIn() && resource.data.assigneeId == request.auth.uid;
-      allow create: if false;
-      allow update: if signedIn()
-        && resource.data.assigneeId == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']);
-      allow delete: if false;
+      allow create, update, delete: if false;
     }
 
     match /follows/{followId} {
