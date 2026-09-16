@@ -1,0 +1,5 @@
+export type CreatorLevel = 'New Creator' | 'Active Creator' | 'Rising Creator' | 'Community Builder' | 'Creator Leader'
+export type CreatorProfile = { id:string; displayName:string; handle?:string; photoURL?:string; bio?:string; youtubeChannelUrl?:string; primaryNiche:string; secondaryNiches:string[]; country?:string; goals:string[]; contentFormat:'long-form'|'shorts'|'both'; audienceSize?:string; xp:number; reputation:number; level:CreatorLevel; streak:number; createdAt?:unknown }
+export type VideoSubmission = { id:string; creatorId:string; youtubeUrl:string; title:string; description?:string; niche:string; contentType:'long-form'|'short'; targetAudience?:string; campaignGoal?:string; createdAt?:unknown; status:'active'|'paused'|'removed' }
+export type Feedback = { id:string; videoId:string; fromCreatorId:string; hook:number; title:number; thumbnail:number; value:number; presentation:number; cta:number; overall:number; note:string; createdAt?:unknown }
+export type Mission = { id:string; videoId:string; assigneeId:string; completedAt?:unknown; status:'assigned'|'completed'|'skipped'; xpAwarded:number }
