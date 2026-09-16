@@ -3,28 +3,55 @@ service cloud.firestore {
   match /databases/{database}/documents {
     function signedIn() { return request.auth != null; }
     function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+    function validRating(field) { return field is int && field >= 1 && field <= 5; }
+
     match /users/{uid} {
       allow read: if signedIn();
-      allow create: if isOwner(uid);
-      allow update: if isOwner(uid) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['xp','reputation','credits','streak','level']);
+      allow create: if isOwner(uid)
+        && request.resource.data.xp == 0
+        && request.resource.data.reputation == 0
+        && request.resource.data.credits == 0
+        && request.resource.data.streak == 0
+        && request.resource.data.level == 'New Creator';
+      allow update: if isOwner(uid)
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['xp','reputation','credits','streak','level']);
       allow delete: if false;
     }
+
     match /videos/{videoId} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.creatorId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.creatorId == request.auth.uid
+        && request.resource.data.status == 'active'
+        && request.resource.data.youtubeUrl is string
+        && request.resource.data.title is string
+        && request.resource.data.niche is string;
       allow update, delete: if signedIn() && resource.data.creatorId == request.auth.uid;
     }
+
     match /feedback/{feedbackId} {
       allow read: if signedIn();
-      allow create: if signedIn() && request.resource.data.fromCreatorId == request.auth.uid;
+      allow create: if signedIn()
+        && request.resource.data.fromCreatorId == request.auth.uid
+        && validRating(request.resource.data.hook)
+        && validRating(request.resource.data.title)
+        && validRating(request.resource.data.thumbnail)
+        && validRating(request.resource.data.value)
+        && validRating(request.resource.data.presentation)
+        && validRating(request.resource.data.cta)
+        && validRating(request.resource.data.overall);
       allow update, delete: if signedIn() && resource.data.fromCreatorId == request.auth.uid;
     }
+
     match /missions/{missionId} {
       allow read: if signedIn() && resource.data.assigneeId == request.auth.uid;
       allow create: if false;
-      allow update: if signedIn() && resource.data.assigneeId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']);
+      allow update: if signedIn()
+        && resource.data.assigneeId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','completedAt']);
       allow delete: if false;
     }
+
     match /{document=**} { allow read, write: if false; }
   }
 }
