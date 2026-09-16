@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization') || ''
     if (!authHeader.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const decoded = await adminAuth.verifyIdToken(authHeader.slice(7))
+    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     const body = await request.json()
     const circleId = String(body.circleId || '').trim()
     const text = String(body.text || '').trim()
