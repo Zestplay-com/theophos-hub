@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization') || ''
     if (!authHeader.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    const decoded = await adminAuth.verifyIdToken(authHeader.slice(7))
+    const decoded = await adminAuth().verifyIdToken(authHeader.slice(7))
     const { challengeId } = await request.json()
     if (!challengeId || typeof challengeId !== 'string') return NextResponse.json({ error: 'challengeId is required.' }, { status: 400 })
     const db = adminDb()
