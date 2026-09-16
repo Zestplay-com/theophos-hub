@@ -1,26 +1,25 @@
 'use client'
 
 import Link from 'next/link'
-import { ArrowRight, LockKeyhole, Mail, Loader2 } from 'lucide-react'
+import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail, Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn } from '../../lib/auth'
+import { GoogleAuthProvider, sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth'
+import { doc, getDoc } from 'firebase/firestore'
+import { auth, db } from '../../lib/firebase'
+
+function authMessage(code:string){
+  const messages:Record<string,string>={
+    'auth/invalid-credential':'Email or password is incorrect.','auth/user-not-found':'No account was found with this email.','auth/wrong-password':'Email or password is incorrect.','auth/too-many-requests':'Too many attempts. Please try again later.','auth/invalid-email':'Please enter a valid email address.','auth/unauthorized-domain':'This website domain is not authorized in Firebase Authentication.','auth/invalid-api-key':'The Firebase API key used by this website is invalid. Check the Vercel environment variables.','auth/operation-not-allowed':'This sign-in method is not enabled in Firebase Authentication.','auth/popup-closed-by-user':'Google sign-in was cancelled.','auth/popup-blocked':'Your browser blocked the Google sign-in window. Allow popups and try again.','auth/network-request-failed':'Firebase could not be reached. Check your internet connection and try again.'
+  }
+  return messages[code] || `Sign in failed (${code || 'unknown-error'}).`
+}
 
 export default function Login(){
-  const router=useRouter()
-  const [email,setEmail]=useState('')
-  const [password,setPassword]=useState('')
-  const [loading,setLoading]=useState(false)
-  const [error,setError]=useState('')
-
-  async function submit(e:React.FormEvent){
-    e.preventDefault(); setError(''); setLoading(true)
-    try { await signIn(email,password); router.push('/dashboard') }
-    catch(err:any){
-      const code=err?.code||''
-      setError(code==='auth/invalid-credential'?'Email or password is incorrect.':code==='auth/too-many-requests'?'Too many attempts. Please try again later.':code==='auth/invalid-email'?'Please enter a valid email address.':'Sign in failed. Please check your details and try again.')
-    } finally { setLoading(false) }
-  }
-
-  return <main className="authPage"><Link className="brand" href="/">theophos<span>hub</span></Link><div className="authCard"><div className="eyebrow">WELCOME BACK</div><h1>Back to your creator journey.</h1><p>Sign in to continue your missions, feedback and creator growth.</p><form onSubmit={submit}><label>Email<input required value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="you@example.com" autoComplete="email"/></label><label>Password<input required minLength={6} value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="••••••••" autoComplete="current-password"/></label>{error&&<div className="formError">{error}</div>}<button className="btn primary large" disabled={loading}>{loading?<><Loader2 size={17} className="spin"/> Signing in...</>:<>Sign in <ArrowRight size={17}/></>}</button></form><div className="divider"><span>secure creator account</span></div><small className="secure"><LockKeyhole size={13}/> Your account data is protected.</small><p className="switch">New to Theophos? <Link href="/join">Create your creator profile</Link></p><p className="switch"><Mail size={14}/> Email/password accounts are ready first; social sign-in can be added next.</p></div></main>
+  const router=useRouter(); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [showPassword,setShowPassword]=useState(false); const [loading,setLoading]=useState(false); const [googleLoading,setGoogleLoading]=useState(false); const [resetLoading,setResetLoading]=useState(false); const [error,setError]=useState(''); const [notice,setNotice]=useState('')
+  async function finishUser(uid:string){ const profile=await getDoc(doc(db,'users',uid)); router.push(profile.exists()?'/dashboard':'/join') }
+  async function submit(e:React.FormEvent){ e.preventDefault(); setError(''); setNotice(''); setLoading(true); try { const credential=await signInWithEmailAndPassword(auth,email.trim(),password); await finishUser(credential.user.uid) } catch(err:any){ setError(authMessage(err?.code||'')) } finally { setLoading(false) } }
+  async function continueWithGoogle(){ setError(''); setNotice(''); setGoogleLoading(true); try { const provider=new GoogleAuthProvider(); provider.setCustomParameters({prompt:'select_account'}); const result=await signInWithPopup(auth,provider); await finishUser(result.user.uid) } catch(err:any){ setError(authMessage(err?.code||'')) } finally { setGoogleLoading(false) } }
+  async function resetPassword(){ setError(''); setNotice(''); if(!email.trim()){setError('Enter your email address first, then tap Forgot password.');return} setResetLoading(true); try { await sendPasswordResetEmail(auth,email.trim()); setNotice('Password reset email sent. Check your inbox and follow the link.') } catch(err:any){ setError(authMessage(err?.code||'')) } finally { setResetLoading(false) } }
+  return <main className="authPage"><Link className="brand" href="/">theophos<span>hub</span></Link><div className="authCard"><div className="eyebrow">WELCOME BACK</div><h1>Back to your creator journey.</h1><p>Sign in to continue your missions, feedback and creator growth.</p><button type="button" className="googleBtn" onClick={continueWithGoogle} disabled={googleLoading||loading||resetLoading}><span className="googleMark">G</span>{googleLoading?<><Loader2 size={17} className="spin"/> Connecting...</>:<>Continue with Google <ArrowRight size={17}/></>}</button><div className="orDivider"><span>or continue with email</span></div><form onSubmit={submit}><div className="field"><label>Email address</label><div className="inputShell"><Mail size={17} className="inputIcon"/><input required value={email} onChange={e=>setEmail(e.target.value)} type="email" placeholder="you@example.com" autoComplete="email"/></div></div><div className="field"><label>Password</label><div className="inputShell"><LockKeyhole size={17} className="inputIcon"/><input required minLength={6} value={password} onChange={e=>setPassword(e.target.value)} type={showPassword?'text':'password'} placeholder="Your password" autoComplete="current-password"/><button type="button" className="passwordToggle" onClick={()=>setShowPassword(v=>!v)} aria-label={showPassword?'Hide password':'Show password'}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button></div></div>{error&&<div className="formError">{error}</div>}{notice&&<div className="successNote">{notice}</div>}<button className="btn primary large fullBtn" disabled={loading||googleLoading||resetLoading}>{loading?<><Loader2 size={17} className="spin"/> Signing in...</>:<>Sign in <ArrowRight size={17}/></>}</button></form><button type="button" className="forgotBtn" onClick={resetPassword} disabled={resetLoading||loading||googleLoading}>{resetLoading?'Sending reset email...':'Forgot your password?'}</button><div className="securityNote"><LockKeyhole size={15}/> Secure creator account</div><p className="switch">New to Theophos? <Link href="/join">Create your creator profile</Link></p></div></main>
 }
