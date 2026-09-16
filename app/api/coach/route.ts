@@ -7,7 +7,7 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get('authorization') || ''
     if (!authHeader.startsWith('Bearer ')) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     const token = authHeader.slice(7)
-    const decoded = await adminAuth.verifyIdToken(token)
+    const decoded = await adminAuth().verifyIdToken(token)
     const body = await request.json()
     const title = String(body.title || '').trim()
     const description = String(body.description || '').trim()
@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
     const goal = String(body.goal || '').trim()
     if (!title) return NextResponse.json({ error: 'A video title is required.' }, { status: 400 })
     if (title.length > 180 || description.length > 5000 || goal.length > 1000) return NextResponse.json({ error: 'Input is too long.' }, { status: 400 })
-    const profileSnap = await adminDb.collection('users').doc(decoded.uid).get()
+    const db = adminDb()
+    const profileSnap = await db.collection('users').doc(decoded.uid).get()
     const profile = profileSnap.exists ? profileSnap.data() || {} : {}
     if (!process.env.OPENAI_API_KEY) return NextResponse.json({ error: 'AI Coach is not configured yet.' }, { status: 503 })
     const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
     const raw = response.output_text || '{}'
     let coach
     try { coach = JSON.parse(raw) } catch { coach = { summary: raw, titleIdeas: [], hook: '', strengths: [], improvements: [], contentIdeas: [], cta: '', nextStep: '' } }
-    await adminDb.collection('coachAnalyses').add({ userId: decoded.uid, title, niche, contentType, createdAt: new Date(), coach })
+    await db.collection('coachAnalyses').add({ userId: decoded.uid, title, niche, contentType, createdAt: new Date(), coach })
     return NextResponse.json({ coach })
   } catch (error) {
     console.error('AI coach error', error)
