@@ -1,1 +1,0 @@
-Theophos Hub is now prepared as a static HTML5/CSS/JavaScript site for GitHub Pages.
