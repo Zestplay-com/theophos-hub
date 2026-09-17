@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth'
 import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore'
-import { auth, db } from '../../lib/firebase'
+import { auth, db, firebaseConfigReady } from '../../lib/firebase'
 
 const niches=['Finance','Gospel / Christian','Gaming','Technology','Education','Business','Motivation','Lifestyle','Fitness','Beauty','Comedy','African Creators','Other']
 const goals=['Get discovered','Improve my content','Get meaningful feedback','Build creator relationships','Grow an audience','Find collaborators','Improve thumbnails','Improve titles & hooks']
@@ -25,6 +25,7 @@ function firebaseMessage(code:string, action:'auth'|'profile'='auth'){
     'auth/admin-restricted-operation':'Firebase is currently restricting new account creation.',
     'auth/unauthorized-domain':'This website domain is not authorized in Firebase Authentication.',
     'auth/invalid-api-key':'The Firebase API key used by the deployed website is invalid.',
+    'auth/api-key-not-valid':'The Firebase API key used by the deployed website is invalid.',
     'auth/network-request-failed':'Firebase could not be reached. Check your internet connection and try again.',
   }
   return messages[code] || `Firebase sign-up failed (${code || 'unknown-error'}).`
@@ -33,18 +34,11 @@ function firebaseMessage(code:string, action:'auth'|'profile'='auth'){
 export default function Join(){
   const router=useRouter(); const [step,setStep]=useState(1); const [niche,setNiche]=useState(''); const [goals,setGoals]=useState<string[]>([]); const [name,setName]=useState(''); const [channel,setChannel]=useState(''); const [email,setEmail]=useState(''); const [password,setPassword]=useState(''); const [showPassword,setShowPassword]=useState(false); const [loading,setLoading]=useState(false); const [googleLoading,setGoogleLoading]=useState(false); const [error,setError]=useState('')
   const toggle=(x:string)=>setGoals(g=>g.includes(x)?g.filter(i=>i!==x):[...g,x])
+  const checkFirebase=()=>{ if(firebaseConfigReady) return true; setError('Firebase is not fully configured for this deployment. Add all six NEXT_PUBLIC_FIREBASE_* variables in Vercel for this environment, then redeploy.'); return false }
 
   useEffect(()=>{
-    const finishGoogleSignIn=async()=>{
-      try{
-        const user=auth.currentUser
-        if(user){
-          setName(prev=>prev||user.displayName||'')
-          setEmail(prev=>prev||user.email||'')
-        }
-      }catch{}
-    }
-    finishGoogleSignIn()
+    const user=auth.currentUser
+    if(user){ setName(prev=>prev||user.displayName||''); setEmail(prev=>prev||user.email||'') }
   },[])
 
   function nextProfile(){
@@ -53,7 +47,7 @@ export default function Join(){
   }
 
   async function continueWithGoogle(){
-    setError('');setGoogleLoading(true)
+    setError('');if(!checkFirebase()) return;setGoogleLoading(true)
     try{
       const provider=new GoogleAuthProvider()
       provider.setCustomParameters({prompt:'select_account'})
@@ -64,13 +58,11 @@ export default function Join(){
       const existing=await getDoc(doc(db,'users',user.uid))
       if(existing.exists()) router.push('/dashboard')
       else setStep(2)
-    }catch(err:any){
-      setError(firebaseMessage(err?.code||''))
-    }finally{setGoogleLoading(false)}
+    }catch(err:any){ setError(firebaseMessage(err?.code||'')) }finally{setGoogleLoading(false)}
   }
 
   async function createProfile(){
-    setError(''); setLoading(true)
+    setError(''); if(!checkFirebase()) return; setLoading(true)
     let uid=auth.currentUser?.uid
     try{
       if(!uid){
@@ -80,13 +72,9 @@ export default function Join(){
       if(!uid) throw new Error('auth/no-current-user')
       try{
         await setDoc(doc(db,'users',uid),{displayName:name.trim(),email:email.trim()||auth.currentUser?.email||'',youtubeChannelUrl:channel.trim()||'',primaryNiche:niche,secondaryNiches:[],goals,contentFormat:'both',xp:0,reputation:0,credits:0,streak:0,level:'New Creator',createdAt:serverTimestamp(),updatedAt:serverTimestamp()},{merge:true})
-      }catch(err:any){
-        setError(firebaseMessage(err?.code||'', 'profile')); return
-      }
+      }catch(err:any){ setError(firebaseMessage(err?.code||'', 'profile')); return }
       router.push('/dashboard')
-    }catch(err:any){
-      setError(firebaseMessage(err?.code||''))
-    }finally{setLoading(false)}
+    }catch(err:any){ setError(firebaseMessage(err?.code||'')) }finally{setLoading(false)}
   }
 
   return <main className="onboard"><header className="onboardNav container"><Link className="brand" href="/">theophos<span>hub</span></Link><div className="onboardProgress"><span>Step {step} of 3</span><div className="progressTrack"><i style={{width:`${step*33.33}%`}}/></div></div></header><div className="onboardWrap">
