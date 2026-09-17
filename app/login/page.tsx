@@ -9,10 +9,13 @@ import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../../lib/firebase'
 
 function authMessage(code:string){
+  const normalized = code.toLowerCase()
   const messages:Record<string,string>={
-    'auth/invalid-credential':'Email or password is incorrect.','auth/user-not-found':'No account was found with this email.','auth/wrong-password':'Email or password is incorrect.','auth/too-many-requests':'Too many attempts. Please try again later.','auth/invalid-email':'Please enter a valid email address.','auth/unauthorized-domain':'This website domain is not authorized in Firebase Authentication.','auth/invalid-api-key':'The Firebase API key used by this website is invalid. Check the Vercel environment variables.','auth/operation-not-allowed':'This sign-in method is not enabled in Firebase Authentication.','auth/popup-closed-by-user':'Google sign-in was cancelled.','auth/popup-blocked':'Your browser blocked the Google sign-in window. Allow popups and try again.','auth/network-request-failed':'Firebase could not be reached. Check your internet connection and try again.'
+    'auth/invalid-credential':'Email or password is incorrect.','auth/user-not-found':'No account was found with this email.','auth/wrong-password':'Email or password is incorrect.','auth/too-many-requests':'Too many attempts. Please try again later.','auth/invalid-email':'Please enter a valid email address.','auth/unauthorized-domain':'This website domain is not authorized in Firebase Authentication.','auth/invalid-api-key':'The Firebase API key used by this website is invalid.','auth/api-key-not-valid':'The Firebase API key used by this website is invalid.','auth/operation-not-allowed':'This sign-in method is not enabled in Firebase Authentication.','auth/popup-closed-by-user':'Google sign-in was cancelled.','auth/popup-blocked':'Your browser blocked the Google sign-in window. Allow popups and try again.','auth/network-request-failed':'Firebase could not be reached. Check your internet connection and try again.'
   }
-  return messages[code] || `Sign in failed (${code || 'unknown-error'}).`
+  if(messages[normalized]) return messages[normalized]
+  if(normalized.includes('api-key-not-valid') || normalized.includes('invalid-api-key')) return 'The Firebase API key configured for this deployment is not valid. Please update the Vercel Firebase API key and redeploy.'
+  return `Sign in failed (${code || 'unknown-error'}).`
 }
 
 export default function Login(){
