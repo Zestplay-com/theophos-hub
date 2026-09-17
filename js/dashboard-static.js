@@ -1,0 +1,4 @@
+import {auth,db,doc,getDoc,collection,getDocs,query,orderBy} from './firebase.js';
+const set=(s,v)=>{const e=document.querySelector(s);if(e)e.textContent=v;};
+async function load(){if(!auth?.currentUser||!db)return;try{const uid=auth.currentUser.uid;const p=await getDoc(doc(db,'users',uid));if(p.exists()){const d=p.data();set('[data-xp]',d.xp??0);set('[data-rep]',d.reputation??0);set('[data-level]',d.level||'New Creator');}const snap=await getDocs(query(collection(db,'videos'),orderBy('createdAt','desc')));const mine=snap.docs.filter(x=>x.data().creatorId===uid);set('[data-videos]',mine.length);if(mine.length){set('#nextTitle','Discover and support another creator.');set('#nextText','Your content is already in the community. Now discover a relevant creator and give useful feedback.');}}catch(e){console.error('Dashboard load failed',e);}}
+if(auth)auth.authStateReady?.().then(load).catch(load);
