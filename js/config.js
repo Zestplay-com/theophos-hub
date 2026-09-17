@@ -1,0 +1,1 @@
+window.THEOPHOS_CONFIG={firebase:{apiKey:"",authDomain:"theophos-rewards-system.firebaseapp.com",projectId:"theophos-rewards-system",storageBucket:"theophos-rewards-system.firebasestorage.app",messagingSenderId:"669378222",appId:"1:669378222:web:4a295fab14a09ff3662f3f"}};
