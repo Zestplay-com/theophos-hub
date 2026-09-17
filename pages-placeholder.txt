@@ -1,0 +1,1 @@
+Theophos Hub GitHub Pages frontend is served from index.html.
