@@ -1,0 +1,31 @@
+name: Static Frontend Check
+on:
+  push:
+    branches: [html5-rebuild]
+  pull_request:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: for file in js/*.js; do node --check "$file"; done
+      - name: Check required static files
+        run: |
+          test -f index.html
+          test -f login.html
+          test -f join.html
+          test -f dashboard.html
+          test -f discover.html
+          test -f submit.html
+          test -f profile.html
+          test -f coach.html
+          test -f support.html
+          test -f css/app.css
+          test -f js/firebase.js
+          test -f js/config.js
+          test -f manifest.webmanifest
