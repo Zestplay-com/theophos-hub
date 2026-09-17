@@ -1,0 +1,1 @@
+Static architecture: HTML5 + CSS + browser JavaScript on GitHub Pages; Firebase Authentication and Firestore for application data; Firebase Functions for protected server operations and AI. Product loop: Create -> Discover -> Support -> Feedback -> Grow.
