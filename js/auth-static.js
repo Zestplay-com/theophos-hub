@@ -1,0 +1,1 @@
+console.log('Theophos Hub static auth module ready');
