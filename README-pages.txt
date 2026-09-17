@@ -1,1 +1,0 @@
-GitHub Pages deployment uses index.html as the static site entry point.
