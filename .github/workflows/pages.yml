@@ -1,7 +1,7 @@
 name: Deploy Theophos Hub to GitHub Pages
 on:
   push:
-    branches: [rebuild/core-stable]
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
