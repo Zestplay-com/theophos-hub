@@ -1,4 +1,4 @@
-name: Build
+name: Static Site Check
 on:
   push:
     branches: [main]
@@ -6,12 +6,24 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: npm install
-      - run: npm run build
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Check required static pages
+        run: |
+          set -e
+          for file in index.html login.html join.html dashboard.html discover.html submit.html profile.html my-content.html start-here.html support.html; do
+            test -f "$file"
+          done
+      - name: Check JavaScript syntax
+        run: |
+          set -e
+          for file in js/*.js; do
+            node --check "$file"
+          done
+      - name: Check Firebase configuration wiring
+        run: |
+          test -f js/config.js
+          test -f js/firebase.js
