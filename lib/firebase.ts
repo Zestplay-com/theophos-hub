@@ -5,12 +5,10 @@ import { getFirestore } from 'firebase/firestore'
 function env(name: string) {
   const value = process.env[name]
   if (!value) return undefined
-  // Vercel values should normally be entered without quotes, but safely
-  // normalize accidental wrapping quotes so the client still works.
   return value.trim().replace(/^['"]|['"]$/g, '').trim() || undefined
 }
 
-const config = {
+const rawConfig = {
   apiKey: env('NEXT_PUBLIC_FIREBASE_API_KEY'),
   authDomain: env('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN'),
   projectId: env('NEXT_PUBLIC_FIREBASE_PROJECT_ID'),
@@ -19,8 +17,25 @@ const config = {
   appId: env('NEXT_PUBLIC_FIREBASE_APP_ID'),
 }
 
-const missing = Object.entries(config).filter(([, value]) => !value).map(([key]) => key)
-if (missing.length && typeof window !== 'undefined') {
+export const firebaseConfigReady = Object.values(rawConfig).every(Boolean)
+
+// Never let a missing Vercel variable crash the entire Next.js client bundle.
+// The fallback is deliberately non-functional; Firebase operations will fail
+// with a normal request/config error that the UI can catch and display.
+const config = firebaseConfigReady
+  ? rawConfig
+  : {
+      ...rawConfig,
+      apiKey: rawConfig.apiKey || 'theophos-missing-firebase-api-key',
+      authDomain: rawConfig.authDomain || 'theophos-missing-firebase.firebaseapp.com',
+      projectId: rawConfig.projectId || 'theophos-missing-firebase-project',
+      storageBucket: rawConfig.storageBucket || 'theophos-missing-firebase.appspot.com',
+      messagingSenderId: rawConfig.messagingSenderId || '000000000000',
+      appId: rawConfig.appId || '1:000000000000:web:theophosmissing',
+    }
+
+if (!firebaseConfigReady && typeof window !== 'undefined') {
+  const missing = Object.entries(rawConfig).filter(([, value]) => !value).map(([key]) => key)
   console.error(`[Theophos Hub] Missing Firebase environment variables: ${missing.join(', ')}`)
 }
 
